@@ -1,0 +1,118 @@
+#include <stdio.h>
+
+#define ROW_START 101
+#define ROW_END 151
+#define COLUMN_COUNT 3000
+
+typedef struct {
+    char word[50];
+    int count;
+} WordCount;
+
+int customAtoi(const char *str) {
+    int res = 0;
+    for (int i = 0; str[i] != '\0'; ++i) {
+        res = res * 10 + str[i] - '0';
+    }
+    return res;
+}
+
+void customStrCpy(char *dest, const char *src) {
+    while (*src) {
+        *dest = *src;
+        src++;
+        dest++;
+    }
+    *dest = '\0';
+}
+
+void customSplit(char *str, char delim, char *result[], int *size) {
+    *size = 0;
+    int i = 0;
+    int j = 0;
+    int start = 0;
+    while (str[i]) {
+        if (str[i] == delim) {
+            str[i] = '\0';
+            result[j] = &str[start];
+            j++;
+            start = i + 1;
+        }
+        i++;
+    }
+    result[j] = &str[start];
+    *size = j + 1;
+}
+
+int compareWords(const char *word1, const char *word2) {
+    int i = 0;
+    while (word1[i] && word2[i]) {
+        if (word1[i] != word2[i]) {
+            return 0;
+        }
+        i++;
+    }
+    return (word1[i] == '\0' && word2[i] == '\0');
+}
+
+int main() {
+    FILE *file = fopen("emails.csv", "r");
+    if (!file) {
+        perror("Error al abrir el archivo");
+        return 1;
+    }
+
+    int row_count = 0;
+    WordCount word_counts[COLUMN_COUNT];
+    for (int i = 0; i < COLUMN_COUNT; i++) {
+        word_counts[i].count = 0;
+    }
+
+    // Ignorar la primera fila
+    char buffer[1024];
+    fgets(buffer, 1024, file);
+
+    // Leer y procesar el archivo
+    while (fgets(buffer, 1024, file) != NULL) {
+        if (row_count >= ROW_START && row_count <= ROW_END) {
+            int column_count = 0;
+            char *result[COLUMN_COUNT];
+            int size;
+            customSplit(buffer, ',', result, &size);
+            for (int i = 1; i < size && i < COLUMN_COUNT; i++) {
+                if (column_count != 0) {
+                    int found = 0;
+                    for (int j = 0; j < word_counts[column_count - 1].count; j++) {
+                        if (compareWords(word_counts[column_count - 1].word, result[i])) {
+                            found = 1;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        customStrCpy(word_counts[column_count - 1].word, result[i]);
+                        word_counts[column_count - 1].count++;
+                    }
+                }
+                column_count++;
+            }
+        }
+        row_count++;
+    }
+
+    fclose(file);
+
+    // Escribir los resultados en un archivo de salida
+    FILE *output_file = fopen("7.txt", "w");
+    if (!output_file) {
+        perror("Error al crear el archivo de salida");
+        return 1;
+    }
+
+    for (int i = 0; i < COLUMN_COUNT; i++) {
+        fprintf(output_file, "Palabra %d: %d\n", i + 1, word_counts[i].count);
+    }
+
+    fclose(output_file);
+
+    return 0;
+}
